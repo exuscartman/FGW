@@ -18,14 +18,17 @@ import (
 
 	"github.com/gorilla/websocket"
 	"faceless/FGWProtocol"
+	l4g "github.com/alecthomas/log4go"
 )
 
+//import loggerNet "github.com/alecthomas/log4go"
+
 // quanju
-var addr = flag.String("addr", "localhost:8080", "http service address")
-var path = flag.String("path", "/echo", "websocket handler path")
-var listen = flag.String("listen", "0.0.0.0:1024", "listen port")
-var devId = flag.String("dev", "123", "device ID")
-var chanId = flag.String("chan" , "1", "channel ID")
+var addr = flag.String("a", "localhost:8080", "http service address")
+var path = flag.String("p", "/echo", "websocket handler path")
+var lport = flag.String("l", "1024", "listen port")
+var devId = flag.String("d", "123", "device ID")
+var chanId = flag.String("c" , "1", "channel ID")
 
 var alarmQueue chan []byte
 var heartbeatQueue chan []byte
@@ -42,6 +45,9 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	flag.Parse()
 	log.SetFlags(0)
+
+	l4g.LoadConfiguration("FGW.logcfg.xml")
+
 	// 设置缓冲深度100的队列
 	alarmQueue = make(chan []byte, 100)
 	heartbeatQueue = make(chan []byte, 10)
@@ -82,20 +88,25 @@ func IsConnectedWatchdog(v IsConnected) {
 func MCDServer(done chan struct{}){
 	defer close(done)
 
-	netListen, err := net.Listen("tcp", *listen)
+	netListen, err := net.Listen("tcp", "0.0.0.0:" + *lport)
 	if err != nil {
-		log.Println("Fatal error: ", err.Error())
+		l4g.Error("Fatal error: %s", err.Error())
+		//log.Println("Fatal error: ", err.Error())
 		return
 	}
 	defer netListen.Close()
 
+	//log.Println("Waiting for clients")
+	l4g.Info("Waiting for clients")
+
 	for {
-		log.Println("Waiting for clients")
 		conn, err := netListen.Accept()
 		if err != nil {
+			l4g.Warn("accept: %s", err)
 			continue
 		}
-		log.Println(conn.RemoteAddr().String(), " tcp connect sucess")
+		l4g.Info("%s tcp connect sucess", conn.RemoteAddr().String())
+		//log.Println(conn.RemoteAddr().String(), " tcp connect sucess")
 		// 开始预警队列的数据接收
 		connWD.set <- 1
 		go handleConnection(conn)
@@ -106,12 +117,12 @@ func handleConnection(conn net.Conn) {
 	defer conn.Close()
 	buffer := make([]byte, 2048)
 	for {
-		// 设置100微妙读取超时
+		// 设置100微秒读取超时
 		conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
 		n, err := conn.Read(buffer)
 		if err != nil {
 			if nerr, ok := err.(net.Error); !ok || !nerr.Timeout() {
-				log.Println(conn.RemoteAddr().String(), " connection error: ", err)
+				l4g.Warn("%s connection error: %s", conn.RemoteAddr().String(), err)
 				connWD.set <- 0
 				return
 			}
@@ -120,23 +131,27 @@ func handleConnection(conn net.Conn) {
 		if n > 0 {
 			heartbeatQueue <- FGWProtocol.EncodeHeartBeat("ACK")
 		}
+
 		select {
 		case m := <- alarmQueue:
 			alarmMsg := FGWProtocol.TransLS2MCD(*devId, *chanId, m)
 			if len(alarmMsg) == 0 {
 				// log.Printf("dump: [%X] \n", m)
+				l4g.Finest("filtered: [%X]", m)
 				continue
 			}
+			l4g.Finest("send: [%s]", alarmMsg)
 			_, err := conn.Write(alarmMsg)
 			if err != nil {
-				log.Println("write:", err)
+				l4g.Warn("write: %s", err)
+				//log.Println("write:", err)
 				connWD.set <- 0
 				return
 			}
 		case hb := <- heartbeatQueue:
 			_, err := conn.Write(hb)
 			if err != nil {
-				log.Println("write:", err)
+				l4g.Warn("write: %s", err)
 				connWD.set <- 0
 				return
 			}
@@ -150,11 +165,12 @@ func localSenseCli(done chan struct{}, interrupt chan os.Signal) {
 	defer close(done)
 
 	u := url.URL{Scheme: "ws", Host: *addr, Path: *path }
-	log.Printf("connecting to %s", u.String())
+	l4g.Info("connecting to %s", u.String())
+	//log.Printf("connecting to %s", u.String())
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
-		log.Fatal("dial:", err)
+		l4g.Error("dial: %s", err)
 	}
 	defer c.Close()
 
@@ -166,27 +182,25 @@ func localSenseCli(done chan struct{}, interrupt chan os.Signal) {
 		defer close(LSCDone)
 
 		tmpBuffer := make([]byte, 0)
-
 		for {
 			fs := make([][]byte, 0)
 			_, message, err := c.ReadMessage()
 			if err != nil {
-				log.Println("read:", err)
+				l4g.Warn("read: %s", err)
+				//log.Println("read:", err)
 				return
 			}
 			// log.Printf("recv: [%X] \n", message)
-			tmpBuffer = append(tmpBuffer, message...)
-			fs, tmpBuffer = FGWProtocol.UnPack(tmpBuffer)
-			numFrames := len(fs)
+			l4g.Finest("recv: [%X]", message)
+			fs, tmpBuffer = FGWProtocol.UnPackLS(append(tmpBuffer, message...))
 			// 处理每个数据包
-			var j int
-			for j = 0; j < numFrames; j++ {
+			for j := 0; j < len(fs); j++ {
 				// 是否有MCD客户端连接
-				isconn := <-connWD.get
-				if (isconn == 1) {
+				if (<-connWD.get == 1) {
+					l4g.Finest("unpack: [%X]", fs[j])
 					alarmQueue <- fs[j]
 				} else {
-					log.Printf("dump: [%X] \n", message)
+					l4g.Finest("dump: [%X]", fs[j])
 				}
 			}
 		}
@@ -197,13 +211,13 @@ func localSenseCli(done chan struct{}, interrupt chan os.Signal) {
 		case <-LSCDone:
 			return
 		case <-interrupt:
-			log.Println("interrupt")
+			l4g.Info("interrupt")
 
 			// Cleanly close the connection by sending a close message and then
 			// waiting (with timeout) for the server to close the connection.
 			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
-				log.Println("write close:", err)
+				l4g.Warn("write close: %s", err)
 				return
 			}
 			select {

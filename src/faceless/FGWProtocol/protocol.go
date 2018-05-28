@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"strings"
 	"io"
-	"log"
 	"encoding/binary"
 	"time"
 	"bytes"
+
 	"github.com/axgle/mahonia"
 	"faceless/Misc"
 )
@@ -51,10 +51,6 @@ type Alarm struct {
 	ExtInfo string `json: ExtInfo`
 }
 
-func UnpackLS(p []byte) []byte {
-	return []byte{}
-}
-
 func DecodeHeartBeat(jsonStream string) {
 	dec := json.NewDecoder(strings.NewReader(jsonStream))
 	for {
@@ -63,9 +59,9 @@ func DecodeHeartBeat(jsonStream string) {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			log.Println(err)
+			//log.Println(err)
 		} else {
-			log.Printf("%s: %s\n", m.MsgType, m.State)
+			//log.Printf("%s: %s\n", m.MsgType, m.State)
 		}
 	}
 }
@@ -78,7 +74,7 @@ func EncodeHeartBeat(s string) []byte {
 	return hbbs
 }
 
-func UnPack(buffer []byte) ([][]byte, []byte) {
+func UnPackLS(buffer []byte) ([][]byte, []byte) {
 	ret := make([][]byte, 0)
 	flag := Origin
 	length := len(buffer)
@@ -161,7 +157,7 @@ func TransLS2MCD(devId string, chanId string, src []byte) []byte {
 	var crcSrc uint16
 	binary.Read(bytes.NewBuffer(src[len(src)-2:]), binary.BigEndian, &crcSrc)
 	if uint16(checkCrc) != crcSrc {
-		log.Println("CRC check failed: ", src)
+		// log.Println("CRC check failed: ", src)
 		return jsonStr
 	}
 	switch src[0] {
