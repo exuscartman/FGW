@@ -165,11 +165,21 @@ func TransLS2MCD(devId string, chanId string, src []byte) []byte {
 		var jsonAlarm Alarm
 		// 过滤报警类型
 		switch src[1] {
-		case 0x01:
+		case 0x01, 0x0A, 0x0F, 0x15:
 			jsonAlarm.DeviceID = devId
 			jsonAlarm.ChanelID = chanId
 			jsonAlarm.MsgType = "Alarm"
-			jsonAlarm.CID = "1000"
+			// Convert alarm type to CID
+			switch src[1] {
+			case 0x01:
+				jsonAlarm.CID = "1000"		// 围栏报警 --》 进入禁区报警
+			case 0x0A:
+				jsonAlarm.CID = "1001"		// 无陪同报警 --》 离开规定区域报警
+			case 0x0F:
+				jsonAlarm.CID = "1002"		// 停留超时报警 --》 特定区域无人看护超时报警
+			case 0x15:
+				jsonAlarm.CID = "1003"		// 区域超员报警 --》 特定区域非法聚集报警
+			}
 			jsonAlarm.DeviceIP = ""
 			jsonAlarm.DeviceMAC = ""
 			jsonAlarm.Port = ""
