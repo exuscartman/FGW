@@ -17,7 +17,7 @@ import (
 	"faceless/FGWProtocol"
 )
 
-var addr = flag.String("addr", "localhost:8080", "http service address")
+var addr = flag.String("addr", "localhost:8090", "http service address")
 
 var upgrader = websocket.Upgrader{} // use default options
 

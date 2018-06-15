@@ -24,10 +24,10 @@ import (
 //import loggerNet "github.com/alecthomas/log4go"
 
 // quanju
-var addr = flag.String("a", "localhost:8080", "http service address")
+var addr = flag.String("a", "localhost:8090", "http service address")
 var path = flag.String("p", "/echo", "websocket handler path")
 var lport = flag.String("l", "1024", "listen port")
-var devId = flag.String("d", "123", "device ID")
+// var devId = flag.String("d", "123", "device ID")
 var chanId = flag.String("c" , "1", "channel ID")
 
 var alarmQueue chan []byte
@@ -134,7 +134,7 @@ func handleConnection(conn net.Conn) {
 
 		select {
 		case m := <- alarmQueue:
-			alarmMsg := FGWProtocol.TransLS2MCD(*devId, *chanId, m)
+			alarmMsg := FGWProtocol.TransLS2MCD(*chanId, m)
 			if len(alarmMsg) == 0 {
 				// log.Printf("dump: [%X] \n", m)
 				l4g.Finest("filtered: [%X]", m)
@@ -171,8 +171,10 @@ func localSenseCli(done chan struct{}, interrupt chan os.Signal) {
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		l4g.Error("dial: %s", err)
+		return
 	}
 	defer c.Close()
+	l4g.Info("connect ws success")
 
 	// 接收推送结束标志
 	LSCDone := make(chan struct{})

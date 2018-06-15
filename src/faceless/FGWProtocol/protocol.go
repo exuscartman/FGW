@@ -18,7 +18,7 @@ const (
 )
 
 const (
-	frameType = 0x03
+	frameType = 0x09
 	alarmType = 0x01
 	correlationId = 0x0011
 	alarmTimestamp = 1431573999604
@@ -150,7 +150,7 @@ func GetFrameTail(buffer []byte, length int) (int, int){
 	return flag, i
 }
 
-func TransLS2MCD(devId string, chanId string, src []byte) []byte {
+func TransLS2MCD(chanId string, src []byte) []byte {
 	jsonStr := make([]byte, 0)
 	// check crc
 	checkCrc := Misc.UsMBCRC16(src[:len(src)-2], len(src)-2)
@@ -161,12 +161,12 @@ func TransLS2MCD(devId string, chanId string, src []byte) []byte {
 		return jsonStr
 	}
 	switch src[0] {
-	case 0x03:
+	case 0x09:
 		var jsonAlarm Alarm
 		// 过滤报警类型
 		switch src[1] {
 		case 0x01, 0x0A, 0x0F, 0x15:
-			jsonAlarm.DeviceID = devId
+			jsonAlarm.DeviceID = string(src[12:20])
 			jsonAlarm.ChanelID = chanId
 			jsonAlarm.MsgType = "Alarm"
 			// Convert alarm type to CID
