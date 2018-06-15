@@ -1,22 +1,22 @@
 @echo off
 :: LocalSense websocket address
-:: 锟斤拷锟叫凤拷锟斤拷锟斤拷锟侥碉拷址锟酵端匡拷
+:: 清研服务器的地址和端口
 set addr="localhost:8090"
 
 :: LocalSense websocket path
-:: 锟斤拷锟斤拷Websocket锟接匡拷
+:: 清研Websocket接口
 set path="/echo"
 
 :: MCD push server listen port
-:: 锟斤拷锟秸大华客伙拷锟剿碉拷锟斤拷锟斤拷锟剿匡拷
+:: 接收大华客户端的侦听端口
 set lport="1024"
 
 :: DeviceID
-:: 锟斤拷锟斤拷息锟斤拷锟叫碉拷DeviceID
+:: 大华消息体中的DeviceID
 :: set DevID="123"
 
 :: ChannelID
-:: 锟斤拷锟斤拷息锟斤拷锟叫碉拷ChannelID
+:: 大华消息体中的ChannelID
 set ChanID="1"
 
-call FGW.exe -a %addr% -p %path% -l %lport%  -c %ChanID%
+call FGW.exe -a %addr% -p %path% -l %lport% -c %ChanID%
