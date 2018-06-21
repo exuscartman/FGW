@@ -17,7 +17,7 @@ import (
 	"faceless/FGWProtocol"
 )
 
-var addr = flag.String("addr", "localhost:8090", "http service address")
+var addr = flag.String("addr", "localhost:9001", "http service address")
 
 var upgrader = websocket.Upgrader{} // use default options
 
@@ -48,13 +48,13 @@ func echo(w http.ResponseWriter, r *http.Request) {
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-	homeTemplate.Execute(w, "ws://"+r.Host+"/echo")
+	homeTemplate.Execute(w, "ws://"+r.Host+"/localSensePush-protocol")
 }
 
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
-	http.HandleFunc("/echo", echo)
+	http.HandleFunc("/localSensePush-protocol", echo)
 	http.HandleFunc("/", home)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }

@@ -7,6 +7,8 @@ import (
 	"encoding/binary"
 	"time"
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 
 	"github.com/axgle/mahonia"
 	"faceless/Misc"
@@ -23,6 +25,16 @@ const (
 	correlationId = 0x0011
 	alarmTimestamp = 1431573999604
 	alarmInfo = "进入区域报警，电子围栏名称：禁区1,联动摄像头"
+)
+
+const (
+	loginFrameType = 0x27
+	loginUserNameLength = 0x00000005
+	loginUserName = "admin"
+	loginPasswordLength = 0x00000020
+	// loginPassword = 0x6361323932346438363639316138393062643936616435653131363230633461
+	//loginPassword = "ca2924d86691a890bd96ad5e11620c4a"
+	//loginPassword = "localsense"
 )
 
 const (
@@ -236,6 +248,36 @@ func MakeFakePacket() []byte {
 	binary.Write(frameTailBuffer, binary.BigEndian, uint16(frameTail))
 
 	packetData := BytesCombine(tempPacketData.Bytes(), crc16CodeBuffer.Bytes(), frameTailBuffer.Bytes())
+
+	return packetData
+}
+
+func MakeLoginPacket(userName string, pwdPlainText string) []byte {
+	tempPacketData := new(bytes.Buffer)
+	binary.Write(tempPacketData, binary.BigEndian, uint16(frameHead))
+	binary.Write(tempPacketData, binary.BigEndian, uint8(loginFrameType))
+	binary.Write(tempPacketData, binary.BigEndian, uint32(loginUserNameLength))
+	tempPacketData.Write([]byte(loginUserName))
+	binary.Write(tempPacketData, binary.BigEndian, loginUserName)
+	binary.Write(tempPacketData, binary.BigEndian, uint32(loginPasswordLength))
+	pwd := md5.New()
+	pwd.Write([]byte(pwdPlainText))
+	pwdCipherStr := hex.EncodeToString(pwd.Sum(nil))
+	tempPacketData.Write([]byte(pwdCipherStr))
+
+	/*
+	crc16Code := Misc.UsMBCRC16(tempPacketData.Bytes()[2:], tempPacketData.Len()-2 )
+	crc16CodeBuffer := new(bytes.Buffer)
+	binary.Write(crc16CodeBuffer, binary.BigEndian, uint16(crc16Code))
+	*/
+	binary.Write(tempPacketData, binary.BigEndian, uint16(0xF606))
+
+
+	frameTailBuffer := new(bytes.Buffer)
+	binary.Write(frameTailBuffer, binary.BigEndian, uint16(frameTail))
+
+	// packetData := BytesCombine(tempPacketData.Bytes(), crc16CodeBuffer.Bytes(), frameTailBuffer.Bytes())
+	packetData := BytesCombine(tempPacketData.Bytes(), frameTailBuffer.Bytes())
 
 	return packetData
 }
