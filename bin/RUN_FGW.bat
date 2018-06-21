@@ -1,11 +1,11 @@
 @echo off
 :: LocalSense websocket address
 :: 清研服务器的地址和端口
-set addr="localhost:8090"
+set addr="localhost:9001"
 
 :: LocalSense websocket path
 :: 清研Websocket接口
-set path="/echo"
+set path="/localSensePush-protocol"
 
 :: MCD push server listen port
 :: 接收大华客户端的侦听端口

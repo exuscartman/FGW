@@ -186,7 +186,7 @@ func localSenseCli(done chan struct{}, interrupt chan os.Signal, loginPacket []b
 	LSCDone := make(chan struct{})
 
 	// 登录
-	// c.WriteMessage(websocket.TextMessage, loginPacket)
+	c.WriteMessage(websocket.BinaryMessage, loginPacket)
 
 	// 接收推送消息
 	go func() {

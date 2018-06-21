@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build ignore
-
 package main
 
 import (
@@ -17,7 +15,7 @@ import (
 	"faceless/FGWProtocol"
 )
 
-var addr = flag.String("addr", "localhost:9001", "http service address")
+var addr = flag.String("addr", "127.0.0.1:9001", "http service address")
 
 var upgrader = websocket.Upgrader{} // use default options
 
@@ -38,7 +36,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 		case t := <-ticker.C:
 			p := FGWProtocol.MakeFakePacket()
 			log.Printf("%s send packet.\n", t.String())
-			err = c.WriteMessage(websocket.TextMessage, p)
+			err = c.WriteMessage(websocket.BinaryMessage, p)
 			if err != nil {
 				log.Println("write:", err)
 				return
@@ -51,9 +49,14 @@ func home(w http.ResponseWriter, r *http.Request) {
 	homeTemplate.Execute(w, "ws://"+r.Host+"/localSensePush-protocol")
 }
 
+func checkSameOrigin(r *http.Request) bool {
+	return true
+}
+
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
+	upgrader.CheckOrigin = checkSameOrigin
 	http.HandleFunc("/localSensePush-protocol", echo)
 	http.HandleFunc("/", home)
 	log.Fatal(http.ListenAndServe(*addr, nil))
