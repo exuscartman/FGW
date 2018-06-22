@@ -58,7 +58,7 @@ func main() {
 	log.SetFlags(0)
 	upgrader.CheckOrigin = checkSameOrigin
 	http.HandleFunc("/localSensePush-protocol", echo)
-	http.HandleFunc("/", home)
+	http.HandleFunc("/", echo)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
 

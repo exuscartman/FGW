@@ -264,12 +264,12 @@ func MakeLoginPacket(userName string, pwdPlainText string) []byte {
 	pwdCipherStr := hex.EncodeToString(pwd.Sum(nil))
 	tempPacketData.Write([]byte(pwdCipherStr))
 
-
-	crc16Code := Misc.UsMBCRC16(tempPacketData.Bytes()[0:], tempPacketData.Len()-2 )
-	//crc16CodeBuffer := new(bytes.Buffer)
-	binary.Write(tempPacketData, binary.BigEndian, uint16(crc16Code))
 	/*
-	binary.Write(tempPacketData, binary.BigEndian, uint16(0xF606))*/
+		crc16Code := Misc.UsMBCRC16(tempPacketData.Bytes()[2:], tempPacketData.Len()-2 )
+		//crc16CodeBuffer := new(bytes.Buffer)
+		binary.Write(tempPacketData, binary.BigEndian, uint16(crc16Code))*/
+
+	binary.Write(tempPacketData, binary.BigEndian, uint16(0xF606))
 
 
 	frameTailBuffer := new(bytes.Buffer)

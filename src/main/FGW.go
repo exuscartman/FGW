@@ -15,6 +15,7 @@ import (
 	"time"
 	"net"
 	"runtime"
+	"net/http"
 
 	"github.com/gorilla/websocket"
 	"faceless/FGWProtocol"
@@ -25,7 +26,7 @@ import (
 
 // quanju
 var addr = flag.String("a", "localhost:9001", "http service address")
-var path = flag.String("p", "/localSensePush-protocol", "websocket handler path")
+var path = flag.String("p", "/", "websocket handler path")
 var lport = flag.String("l", "1024", "listen port")
 // var devId = flag.String("d", "123", "device ID")
 var chanId = flag.String("c" , "1", "channel ID")
@@ -52,7 +53,7 @@ func main() {
 	loginPacket := FGWProtocol.MakeLoginPacket(*userName, *password)
 
 	l4g.LoadConfiguration("FGW.logcfg.xml")
-	l4g.Info(loginPacket)
+	l4g.Finest("login packet: [%X]", loginPacket)
 
 	// 设置缓冲深度100的队列
 	alarmQueue = make(chan []byte, 100)
@@ -174,19 +175,28 @@ func localSenseCli(done chan struct{}, interrupt chan os.Signal, loginPacket []b
 	l4g.Info("connecting to %s", u.String())
 	//log.Printf("connecting to %s", u.String())
 
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	var header = make(http.Header)
+	header.Add("Sec-WebSocket-Protocol","localSensePush-protocol")
+	header.Add("Origin", "file://")
+
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), header)
 	if err != nil {
 		l4g.Error("dial: %s", err)
 		return
 	}
 	defer c.Close()
-	l4g.Info("connect ws success")
+	l4g.Info("connect ws successfully")
 
 	// 接收推送结束标志
 	LSCDone := make(chan struct{})
 
 	// 登录
-	c.WriteMessage(websocket.BinaryMessage, loginPacket)
+	err = c.WriteMessage(websocket.BinaryMessage, loginPacket)
+	if err != nil {
+		l4g.Error("login failed: ", err)
+		return
+	}
+	l4g.Info("login successfully")
 
 	// 接收推送消息
 	go func() {

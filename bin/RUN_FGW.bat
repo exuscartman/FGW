@@ -5,7 +5,7 @@ set addr="localhost:9001"
 
 :: LocalSense websocket path
 :: 清研Websocket接口
-set path="/localSensePush-protocol"
+set path="/"
 
 :: MCD push server listen port
 :: 接收大华客户端的侦听端口
