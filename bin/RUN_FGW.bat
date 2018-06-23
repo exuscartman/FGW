@@ -7,6 +7,10 @@ set addr="localhost:9001"
 :: 清研Websocket接口
 set path="/"
 
+:: LocalSense websocket sub protocol
+:: 清研Websocket子协议
+set subprotocol="localSensePush-protocol"
+
 :: MCD push server listen port
 :: 接收大华客户端的侦听端口
 set lport="1024"
@@ -27,4 +31,4 @@ set pwd="localsense"
 :: 大华消息体中的ChannelID
 set ChanID="1"
 
-call FGW.exe -a %addr% -p %path% -l %lport% -c %ChanID% -u %user% -s %pwd%
+call FGW.exe -a %addr% -p %path% -l %lport% -c %ChanID% -u %user% -s %pwd% -t %subprotocol%

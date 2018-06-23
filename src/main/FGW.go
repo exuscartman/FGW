@@ -32,6 +32,7 @@ var lport = flag.String("l", "1024", "listen port")
 var chanId = flag.String("c" , "1", "channel ID")
 var userName = flag.String("u", "admin", "websocket login user name")
 var password = flag.String("s", "localsense", "websocket login password")
+var subProtocol = flag.String("t", "localSensePush-protocol", "websocket subProtocol")
 
 
 var alarmQueue chan []byte
@@ -176,7 +177,7 @@ func localSenseCli(done chan struct{}, interrupt chan os.Signal, loginPacket []b
 	//log.Printf("connecting to %s", u.String())
 
 	var header = make(http.Header)
-	header.Add("Sec-WebSocket-Protocol","localSensePush-protocol")
+	header.Add("Sec-WebSocket-Protocol",*subProtocol)
 	header.Add("Origin", "file://")
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), header)

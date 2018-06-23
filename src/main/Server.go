@@ -20,7 +20,11 @@ var addr = flag.String("addr", "127.0.0.1:9001", "http service address")
 var upgrader = websocket.Upgrader{} // use default options
 
 func echo(w http.ResponseWriter, r *http.Request) {
-	c, err := upgrader.Upgrade(w, r, nil)
+	var header = make(http.Header)
+	header.Add("Sec-WebSocket-Protocol","localSensePush-protocol")
+	header.Add("Origin", "file://")
+
+	c, err := upgrader.Upgrade(w, r, header)
 	if err != nil {
 		log.Print("upgrade:", err)
 		return

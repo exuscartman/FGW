@@ -11,7 +11,9 @@ import (
 	"encoding/hex"
 
 	"github.com/axgle/mahonia"
+	"github.com/imroc/biu"
 	"faceless/Misc"
+	"fmt"
 )
 
 const (
@@ -264,19 +266,56 @@ func MakeLoginPacket(userName string, pwdPlainText string) []byte {
 	pwdCipherStr := hex.EncodeToString(pwd.Sum(nil))
 	tempPacketData.Write([]byte(pwdCipherStr))
 
-	/*
-		crc16Code := Misc.UsMBCRC16(tempPacketData.Bytes()[2:], tempPacketData.Len()-2 )
-		//crc16CodeBuffer := new(bytes.Buffer)
-		binary.Write(tempPacketData, binary.BigEndian, uint16(crc16Code))*/
-
-	binary.Write(tempPacketData, binary.BigEndian, uint16(0xF606))
-
+	crcStr := fmt.Sprintf("%X", tempPacketData.Bytes())
+	crc16Code := MakeLoginCrc(crcStr)
+	binary.Write(tempPacketData, binary.BigEndian, uint16(crc16Code))
+	// binary.Write(tempPacketData, binary.BigEndian, uint16(0xF606))
 
 	frameTailBuffer := new(bytes.Buffer)
 	binary.Write(frameTailBuffer, binary.BigEndian, uint16(frameTail))
 
-	// packetData := BytesCombine(tempPacketData.Bytes(), crc16CodeBuffer.Bytes(), frameTailBuffer.Bytes())
 	packetData := BytesCombine(tempPacketData.Bytes(), frameTailBuffer.Bytes())
 
 	return packetData
+}
+
+func MakeLoginCrc(sor string) uint16 {
+	tempBytes,_ := hex.DecodeString(sor)
+	tempStr := biu.BytesToBinaryString(tempBytes)
+	tempStr = strings.Replace(tempStr, " ", "", -1)
+	tempStr = tempStr[1:len(tempStr) - 1]
+
+	crcMod := GetHigh1Mod(tempStr)
+	var nCrcMod = uint64(0)
+	for ;true; {
+		crcMod = GetHigh1Mod(crcMod)
+		if len(crcMod) <= 17 {
+			fmt.Sscanf(crcMod, "%b", &nCrcMod)
+			if nCrcMod <= 98307 {
+				break
+			}
+		}
+	}
+
+	fmt.Sscanf(crcMod, "%b", &nCrcMod)
+	return uint16(nCrcMod)
+}
+
+func GetHigh1Mod(sor string) string {
+	var crc16_gx = "11000000000000011"
+	var nGx = uint64(0)
+	sorLen := len(sor)
+	fmt.Sscanf(crc16_gx, "%b", &nGx)
+	fstSub := sor[:17]
+	lstSub := sor[17:sorLen]
+
+	var nFst = uint64(0)
+	fmt.Sscanf(sor[:17], "%b", &nFst)
+	if nFst < nGx {
+		fstSub = sor[:18]
+		lstSub = sor[18:sorLen]
+	}
+	fmt.Sscanf(fstSub, "%b", &nFst)
+	subMod := fmt.Sprintf("%b", nFst - nGx)
+	return subMod + lstSub
 }
