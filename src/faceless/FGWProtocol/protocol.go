@@ -180,6 +180,11 @@ func TransLS2MCD(chanId string, src []byte) []byte {
 		// 过滤报警类型
 		switch src[1] {
 		case 0x01, 0x0A, 0x0F, 0x15:
+			/*
+			var did uint64
+			binary.Read(bytes.NewBuffer(src[12:20]), binary.BigEndian, &did)
+			jsonAlarm.DeviceID = did
+			*/
 			jsonAlarm.DeviceID = string(src[12:20])
 			jsonAlarm.ChanelID = chanId
 			jsonAlarm.MsgType = "Alarm"
