@@ -14,6 +14,7 @@ import (
 	"github.com/imroc/biu"
 	"faceless/Misc"
 	"fmt"
+	"strconv"
 )
 
 const (
@@ -180,12 +181,12 @@ func TransLS2MCD(chanId string, src []byte) []byte {
 		// 过滤报警类型
 		switch src[1] {
 		case 0x01, 0x0A, 0x0F, 0x15:
-			/*
-			var did uint64
+
+			var did int64
 			binary.Read(bytes.NewBuffer(src[12:20]), binary.BigEndian, &did)
-			jsonAlarm.DeviceID = did
-			*/
-			jsonAlarm.DeviceID = string(src[12:20])
+			jsonAlarm.DeviceID = strconv.FormatInt(did,10)
+
+			/*jsonAlarm.DeviceID = string(src[12:20])*/
 			jsonAlarm.ChanelID = chanId
 			jsonAlarm.MsgType = "Alarm"
 			// Convert alarm type to CID
@@ -224,7 +225,7 @@ func BytesCombine(pBytes ...[]byte) []byte {
 
 func MakeFakePacket() []byte {
 	alarmInfoGbk := []byte(mahonia.NewEncoder("gbk").ConvertString(alarmInfo))
-	alarmInfoByte := make([]byte, 120)
+	alarmInfoByte := make([]byte, 112)
 	copy(alarmInfoByte, alarmInfoGbk)
 	tempPacketData := new(bytes.Buffer)
 	binary.Write(tempPacketData, binary.BigEndian, uint16(frameHead))
@@ -246,6 +247,7 @@ func MakeFakePacket() []byte {
 	log.Println(" ", ts1)
 	*/
 	binary.Write(tempPacketData, binary.BigEndian, uint64(time.Now().UnixNano()/1000000))
+	binary.Write(tempPacketData, binary.BigEndian, int64(1525760657926))
 	tempPacketData.Write(alarmInfoByte)
 
 	crc16Code := Misc.UsMBCRC16(tempPacketData.Bytes()[2:], tempPacketData.Len()-2 )
