@@ -16,10 +16,12 @@ import (
 	"net"
 	"runtime"
 	"net/http"
+	"encoding/json"
 
 	"github.com/gorilla/websocket"
 	"faceless/FGWProtocol"
 	l4g "github.com/alecthomas/log4go"
+	"sync"
 )
 
 //import loggerNet "github.com/alecthomas/log4go"
@@ -45,6 +47,8 @@ type IsConnected struct {
 }
 
 var connWD IsConnected
+
+var noAlarmPeriodMap sync.Map
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -123,6 +127,18 @@ func MCDServer(done chan struct{}){
 
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
+	go func() {
+		for {
+			select {
+			case <- time.After(time.Second*20):
+				noAlarmPeriodMap.Range(func(k, v interface{}) bool {
+					noAlarmPeriodMap.Delete(k)
+					return true
+				})
+			}
+		}
+	} ()
+
 	buffer := make([]byte, 2048)
 	for {
 		// 设置100微秒读取超时
@@ -148,8 +164,15 @@ func handleConnection(conn net.Conn) {
 				l4g.Finest("filtered: [%X]", m)
 				continue
 			}
+			var dat map[string]string
+			err := json.Unmarshal([]byte(alarmMsg), &dat)
+			_, isSent := noAlarmPeriodMap.LoadOrStore(dat["CID"]+dat["DeviceID"], true)
+			if isSent {
+				l4g.Finest("Repeated: [%s]", alarmMsg)
+				continue
+			}
 			l4g.Finest("send: [%s]", alarmMsg)
-			_, err := conn.Write(alarmMsg)
+			_, err = conn.Write(alarmMsg)
 			if err != nil {
 				l4g.Warn("write: %s", err)
 				//log.Println("write:", err)
